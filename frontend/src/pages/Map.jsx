@@ -5,7 +5,6 @@ import "leaflet-draw/dist/leaflet.draw.css";
 import { EditControl } from "react-leaflet-draw";
 import L from "leaflet";
 import leafletImage from "leaflet-image";
-import ImageDisplay from './ImageDisplay';  // Import the ImageDisplay component
 import dataContext from '../contexts/dataContext.js'
 
 // Helper function to calculate rectangle area
@@ -71,11 +70,21 @@ const Map = () => {
 
         const croppedCanvas = document.createElement("canvas");
         const ctx = croppedCanvas.getContext("2d");
-        const width = bounds.getEast() - bounds.getWest();
-        const height = bounds.getNorth() - bounds.getSouth();
+        
+        const earthRadius = 6378137; // Earth's radius in meters
+
+        const lat1 = bounds.getSouth();
+        const lat2 = bounds.getNorth();
+        const lng1 = bounds.getWest();
+        const lng2 = bounds.getEast();
+
+        const width = earthRadius * ((lng2 - lng1) * (Math.PI / 180)) * Math.cos(((lat1 + lat2) / 2) * (Math.PI / 180));
+        const height = earthRadius * ((lat2 - lat1) * (Math.PI / 180));
 
         croppedCanvas.width = width;
         croppedCanvas.height = height;
+        console.log(croppedCanvas.width);
+        console.log(croppedCanvas.height);
 
         // Draw the selected area on the canvas
         ctx.drawImage(
@@ -94,11 +103,20 @@ const Map = () => {
         const imageData = croppedCanvas.toDataURL("image/png");
 
         // Save the image URL in the state to pass it to the child component
-        setImageUrl(imageData);        
+        setImageUrl(imageData); 
+        console.log("imageURL: ", imageData); 
+        
+        var img = document.createElement('img');
+        img.width = width;
+        img.height = height;
+        img.crossOrigin = "anonymous";
+        img.src = imageData;
+        document.body.appendChild(img);
 
         croppedCanvas.toBlob(function (blob) {
             // Create a File object from the Blob
             const file = new File([blob], 'clippedImage.png', { type: 'image/png' });
+            console.log(file);
 
             const formData = new FormData();
             formData.append('image', file);
@@ -112,15 +130,13 @@ const Map = () => {
                 method: 'POST',
                 body: formData
             }).then(res => {
-                return res.json()
+                return res.json();
             }).then(data => {
-                console.log("Power calculated", data)                
+                console.log("Power calculated", data);              
             }).catch(err => {
-                console.log(err)
-            })
-
-        });    
-         
+                console.log(err);
+            })            
+        });           
       });
     }
   };
@@ -168,8 +184,7 @@ const Map = () => {
         </FeatureGroup>
       </MapContainer>
 
-      {/* Pass the captured image to the ImageDisplay component as a prop */}
-      {imageUrl && <ImageDisplay image={imageUrl} />}
+      
     </div>
   );
 };
