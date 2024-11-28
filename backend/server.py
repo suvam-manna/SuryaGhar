@@ -119,7 +119,8 @@ def upload_image():
 
     # Return the calculated power in the response
     return jsonify({
-        "power": power
+        "power": power,
+        "roofTopArea": area_building
     })
 
 
