@@ -5,53 +5,57 @@ import "leaflet-draw/dist/leaflet.draw.css";
 import { EditControl } from "react-leaflet-draw";
 import L from "leaflet";
 import leafletImage from "leaflet-image";
-import dataContext from '../contexts/dataContext.js'
+import { useNavigate } from 'react-router-dom';
 
 // Helper function to calculate rectangle area
 const calculateRectangleArea = (bounds) => {
-    const earthRadius = 6378137; // Earth's radius in meters
+  const earthRadius = 6378137; // Earth's radius in meters
 
-    const lat1 = bounds.getSouth();
-    const lat2 = bounds.getNorth();
-    const lng1 = bounds.getWest();
-    const lng2 = bounds.getEast();
+  const lat1 = bounds.getSouth();
+  const lat2 = bounds.getNorth();
+  const lng1 = bounds.getWest();
+  const lng2 = bounds.getEast();
 
-    const width = earthRadius * ((lng2 - lng1) * (Math.PI / 180)) * Math.cos(((lat1 + lat2) / 2) * (Math.PI / 180));
-    const height = earthRadius * ((lat2 - lat1) * (Math.PI / 180));
+  const width =
+    earthRadius *
+    ((lng2 - lng1) * (Math.PI / 180)) *
+    Math.cos(((lat1 + lat2) / 2) * (Math.PI / 180));
+  const height = earthRadius * ((lat2 - lat1) * (Math.PI / 180));
 
-    const area = Math.abs(width * height); // Area in square meters
-    return area;
+  const area = Math.abs(width * height); // Area in square meters
+  return area;
 };
 
 const LocationMarker = () => {
-    const map = useMap();
-  
-    useEffect(() => {
-      map.locate({ setView: true, maxZoom: 16 });
-  
-      const onLocationFound = (e) => {
-        L.marker(e.latlng).addTo(map).bindPopup("You are here").openPopup();
-      };
-  
-      const onLocationError = () => {
-        alert("Unable to retrieve your location");
-      };
-  
-      map.on("locationfound", onLocationFound);
-      map.on("locationerror", onLocationError);
-  
-      return () => {
-        map.off("locationfound", onLocationFound);
-        map.off("locationerror", onLocationError);
-      };
-    }, [map]);
-  
-    return null;
+  const map = useMap();
+
+  useEffect(() => {
+    map.locate({ setView: true, maxZoom: 32 });
+
+    const onLocationFound = (e) => {
+      L.marker(e.latlng).addTo(map).bindPopup("You are here").openPopup();
+    };
+
+    const onLocationError = () => {
+      alert("Unable to retrieve your location");
+    };
+
+    map.on("locationfound", onLocationFound);
+    map.on("locationerror", onLocationError);
+
+    return () => {
+      map.off("locationfound", onLocationFound);
+      map.off("locationerror", onLocationError);
+    };
+  }, [map]);
+
+  return null;
 };
 
 const Map = () => {
   const [imageUrl, setImageUrl] = useState(null);
   const mapRef = useRef(null);
+  const navigate = useNavigate();
 
   const handleCreated = (e) => {
     const layer = e.layer;
@@ -60,7 +64,8 @@ const Map = () => {
       const area = calculateRectangleArea(bounds);
       console.log("Rectangle created with bounds:", bounds);
       console.log("Calculated area (in square meters):", area.toFixed(2));
-
+      let topLeft = bounds.getNorthWest();
+      console.log("topleft", topLeft.x);
       // Capture the map image inside the drawn rectangle
       leafletImage(mapRef.current, (err, canvas) => {
         if (err) {
@@ -70,7 +75,7 @@ const Map = () => {
 
         const croppedCanvas = document.createElement("canvas");
         const ctx = croppedCanvas.getContext("2d");
-        
+
         const earthRadius = 6378137; // Earth's radius in meters
 
         const lat1 = bounds.getSouth();
@@ -78,35 +83,40 @@ const Map = () => {
         const lng1 = bounds.getWest();
         const lng2 = bounds.getEast();
 
-        const width = earthRadius * ((lng2 - lng1) * (Math.PI / 180)) * Math.cos(((lat1 + lat2) / 2) * (Math.PI / 180));
-        const height = earthRadius * ((lat2 - lat1) * (Math.PI / 180));
+        // Convert geographical bounds to pixel coordinates
+        const topLeft = mapRef.current.latLngToContainerPoint(
+          bounds.getNorthWest()
+        );
+        const bottomRight = mapRef.current.latLngToContainerPoint(
+          bounds.getSouthEast()
+        );
+
+        const width = bottomRight.x - topLeft.x;
+        const height = bottomRight.y - topLeft.y;
 
         croppedCanvas.width = width;
         croppedCanvas.height = height;
-        console.log(croppedCanvas.width);
-        console.log(croppedCanvas.height);
 
-        // Draw the selected area on the canvas
+        // Draw the selected area on the cropped canvas
         ctx.drawImage(
-          canvas,
-          bounds.getWest(),
-          bounds.getSouth(),
-          width,
-          height,
-          0,
-          0,
-          width,
-          height
+          canvas, // Source canvas
+          topLeft.x, // Source x (start)
+          topLeft.y, // Source y (start)
+          width, // Source width
+          height, // Source height
+          0, // Destination x (start)
+          0, // Destination y (start)
+          width, // Destination width
+          height // Destination height
         );
-
         // Convert canvas to base64 image
         const imageData = croppedCanvas.toDataURL("image/png");
 
         // Save the image URL in the state to pass it to the child component
-        setImageUrl(imageData); 
-        console.log("imageURL: ", imageData); 
-        
-        var img = document.createElement('img');
+        setImageUrl(imageData);
+        console.log("imageURL: ", imageData);
+
+        var img = document.createElement("img");
         img.width = width;
         img.height = height;
         img.crossOrigin = "anonymous";
@@ -114,29 +124,36 @@ const Map = () => {
         document.body.appendChild(img);
 
         croppedCanvas.toBlob(function (blob) {
-            // Create a File object from the Blob
-            const file = new File([blob], 'clippedImage.png', { type: 'image/png' });
-            console.log(file);
+          // Create a File object from the Blob
+          const file = new File([blob], "clippedImage.png", {
+            type: "image/png",
+          });
+          console.log(file);
 
-            const formData = new FormData();
-            formData.append('image', file);
+          const formData = new FormData();
+          formData.append("image", file);
 
-            formData.append('long', bounds.getWest());
-            formData.append('lat', bounds.getSouth());
+          formData.append("long", bounds.getWest());
+          formData.append("lat", bounds.getSouth());
 
-            formData.append('area', area);
+          formData.append("area", area);
 
-            fetch('http://127.0.0.1:5000/upload', {
-                method: 'POST',
-                body: formData
-            }).then(res => {
-                return res.json();
-            }).then(data => {
-                console.log("Power calculated", data);              
-            }).catch(err => {
-                console.log(err);
-            })            
-        });           
+          fetch("http://127.0.0.1:5000/upload", {
+            method: "POST",
+            body: formData,
+          })
+            .then((res) => {
+              return res.json();
+            })
+            .then((data) => {
+              console.log("Data: ", data);
+
+              navigate("/result", { state: {data} })
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        });
       });
     }
   };
@@ -183,8 +200,6 @@ const Map = () => {
           />
         </FeatureGroup>
       </MapContainer>
-
-      
     </div>
   );
 };

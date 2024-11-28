@@ -16,12 +16,12 @@ function Header() {
           Home
         </NavLink>
         <NavLink
-          to="/estimate"
+          to="/map"
           className={({ isActive }) =>
             isActive ? "text-yellow-300 font-semibold" : "text-yellow-100 hover:text-yellow-300 font-semibold"
           }
         >
-          Estimate
+          Map
         </NavLink>
         <NavLink
           to="/tutorial"
