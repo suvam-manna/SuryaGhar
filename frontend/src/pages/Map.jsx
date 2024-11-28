@@ -5,7 +5,7 @@ import "leaflet-draw/dist/leaflet.draw.css";
 import { EditControl } from "react-leaflet-draw";
 import L from "leaflet";
 import leafletImage from "leaflet-image";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 
 // Helper function to calculate rectangle area
 const calculateRectangleArea = (bounds) => {
@@ -116,12 +116,12 @@ const Map = () => {
         setImageUrl(imageData);
         console.log("imageURL: ", imageData);
 
-        var img = document.createElement("img");
-        img.width = width;
-        img.height = height;
-        img.crossOrigin = "anonymous";
-        img.src = imageData;
-        document.body.appendChild(img);
+        // var img = document.createElement("img");
+        // img.width = width;
+        // img.height = height;
+        // img.crossOrigin = "anonymous";
+        // img.src = imageData;
+        // document.body.appendChild(img);
 
         croppedCanvas.toBlob(function (blob) {
           // Create a File object from the Blob
@@ -147,8 +147,9 @@ const Map = () => {
             })
             .then((data) => {
               console.log("Data: ", data);
+              data.imageUrl = imageData;
 
-              navigate("/result", { state: {data} })
+              navigate("/result", { state: { data: data } });
             })
             .catch((error) => {
               console.log(error);
